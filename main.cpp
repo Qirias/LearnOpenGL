@@ -15,8 +15,8 @@
 namespace fs = std::filesystem;
 
 
-const unsigned int screenWidth = 1680;
-const unsigned int screenHeight = 900;
+const unsigned int screenWidth = 1080;
+const unsigned int screenHeight = 1080;
 
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = screenWidth / 2.0f;
@@ -27,7 +27,6 @@ bool showFPS = false;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-glm::vec3 lightPos(1.5f, 0.2f, 3.5f);
 unsigned int loadTexture(char const * path);
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height)
@@ -128,8 +127,6 @@ int main()
     ShaderProgramSource source = ParseShader("res/Basic.glsl");
     unsigned int shader         = CreateShader(source.VertexShader, source.FragmentShader);
 
-    //unsigned int cubeTexture = loadTexture(fs::path("res/container2.png").c_str());
-    //unsigned int floorTexture = loadTexture(fs::path("res/metal.jpg").c_str());
     
     Model backpack(fs::path("res/models/backpack/backpack.obj").c_str());
 
@@ -152,6 +149,24 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         useShader(shader);
+
+        setVec3(shader, "viewPos", camera.Position);
+
+        setVec3(shader, "pointLights[0].position",  glm::vec3(1.5f, 1.2f, 7.5f));
+        setVec3(shader, "pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
+        setVec3(shader, "pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
+        setVec3(shader, "pointLights[0].specular", 1.0f, 1.0f, 1.0f);
+        setFloat(shader, "pointLights[0].constant", 1.0f);
+        setFloat(shader, "pointLights[0].linear", 0.09);
+        setFloat(shader, "pointLights[0].quadratic", 0.032);
+
+        setVec3(shader, "pointLights[1].position",  glm::vec3(1.5f, 1.2f, -7.5f));
+        setVec3(shader, "pointLights[1].ambient", 0.05f, 0.05f, 0.05f);
+        setVec3(shader, "pointLights[1].diffuse", 0.8f, 0.8f, 0.8f);
+        setVec3(shader, "pointLights[1].specular", 1.0f, 1.0f, 1.0f);
+        setFloat(shader, "pointLights[1].constant", 1.0f);
+        setFloat(shader, "pointLights[1].linear", 0.09);
+        setFloat(shader, "pointLights[1].quadratic", 0.032);
 
         glm::mat4 view =  camera.GetViewMatrix();
         glm::mat4 proj  = glm::perspective(glm::radians(camera.Zoom), (float)screenWidth /(float)screenHeight, 0.1f, 100.0f);
@@ -220,4 +235,4 @@ unsigned int loadTexture(char const * path)
     return textureID;
 }
 
-//g++ main.cpp -std=c++17 -lstdc++fs -lGL -lglfw && ./a.out
+// g++ main.cpp -lGL -lglfw -std=c++17 -lstdc++fs -lassimp && ./a.out
