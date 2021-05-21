@@ -4,6 +4,6 @@ This repo helps me keeping track on mister's [Joey de Vries](https://learnopengl
 Compile and run with ```g++ main.cpp -std=c++17 -lassimp -lGL -lglfw && ./a.out```
 
 # What latest commit renders
-## 4 Cubes using Uniform Buffers
-![AdvancedGLSL](screenshots/AdvancedGLSL.png)
+## Visual representation of normals
+![GeometryShader](screenshots/Backpack_Normals.png)
 
