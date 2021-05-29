@@ -4,6 +4,6 @@ This repo helps me keeping track on mister's [Joey de Vries](https://learnopengl
 Compile and run with ```g++ main.cpp -std=c++17 -lassimp -lGL -lglfw && ./a.out```
 
 # What latest commit renders
-## Off and On MSAA
-![Anti-Aliasing](screenshots/MSAA.png)
+## Phong and Blinn-Phong differences
+![Blinn](screenshots/Blinn-Phong.png)
 

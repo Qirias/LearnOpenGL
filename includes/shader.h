@@ -113,7 +113,7 @@ static unsigned int CompileShader(unsigned int type, const std::string& source)
     return id;
 }
 
-static unsigned int CreateShader(const std::string& VertexShader, const std::string& FramgneShader, const std::string& GeometryShader)
+static unsigned int CreateShader(const std::string& VertexShader, const std::string& FramgneShader, const std::string& GeometryShader = "")
 {
     unsigned int program = glCreateProgram();
     unsigned int vs = CompileShader(GL_VERTEX_SHADER, VertexShader);
