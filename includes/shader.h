@@ -14,7 +14,6 @@ struct ShaderProgramSource
     std::string VertexShader;
     std::string FragmentShader;
     std::string GeometryShader;
-
 };
 
 void useShader(unsigned int program) 

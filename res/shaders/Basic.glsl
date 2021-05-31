@@ -29,7 +29,7 @@ in vec2 TexCoords;
 in vec3 FragPos;
 in vec3 Normal;
 
-uniform bool showBlinn;
+uniform bool compare;
 
 struct Material{
     sampler2D texture;
@@ -65,7 +65,7 @@ void main()
     vec3 result = vec3(0.0);
     result += CalcPointLight(pointLights, norm, FragPos, viewDir);
 
-    FragColor = vec4(result, 1.0);
+    FragColor = vec4(compare ? pow(result, vec3(0.4545)) : result, 1.0);
 }
 
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
@@ -73,16 +73,13 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     vec3 lightDir = normalize(light.position - fragPos);
     float diff = max(dot(normal, lightDir),0.0);
 
-    vec3 reflectDir = reflect(-lightDir, normal);
+    // vec3 reflectDir = reflect(-lightDir, normal);
     vec3 halfwayDir = normalize(lightDir + viewDir);
-    float spec = 0.0;
-    if (showBlinn)
-        spec = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
-    else
-        spec = pow(max(dot(viewDir, reflectDir), 0.0), 8.0);
 
+    float spec = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
     float distance      = length(light.position - fragPos);
-    float attenuation   = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
+    // float attenuation   = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
+    float attenuation = 1.0 / (compare ? distance * distance : distance);
 
     vec3 ambient    = light.ambient * vec3(texture(texture1_diffuse1, TexCoords));
     vec3 diffuse    = light.diffuse * diff * vec3(texture(texture1_diffuse1, TexCoords));

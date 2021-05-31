@@ -25,12 +25,12 @@ float lastY = screenHeight / 2.0f;
 bool firstMouse = true;
 bool showFPS = false;
 bool showQuad = true;
-bool Blinn = true;
+bool compare = false;
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-unsigned int loadTexture(char const * path);
+unsigned int loadTexture(char const * path, bool gammaCorrection);
 unsigned int loadCubemap(vector<std::string> faces);
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height)
@@ -195,6 +195,7 @@ float vertices[] = {
         -10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
          10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,  10.0f, 10.0f
     };
+
     // plane VAO
     unsigned int planeVAO, planeVBO;
     glGenVertexArrays(1, &planeVAO);
@@ -210,8 +211,8 @@ float vertices[] = {
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     glBindVertexArray(0);
 
-    unsigned int cubeTexture = loadTexture(fs::path("res/textures/container2.png").c_str());
-    unsigned int floorTexture = loadTexture(fs::path("res/textures/woodFloor.jpg").c_str());
+    unsigned int cubeTexture = loadTexture(fs::path("res/textures/container2.png").c_str(), false);
+    unsigned int floorTexture = loadTexture(fs::path("res/textures/woodFloor.jpg").c_str(), true);
 
     stbi_set_flip_vertically_on_load(true);
 
@@ -251,7 +252,7 @@ float vertices[] = {
         glm::mat4 proj  = glm::perspective(glm::radians(camera.Zoom), (float)screenWidth /(float)screenHeight, 0.1f, 100.0f);
         
         useShader(shader);
-        setBool(shader, "showBlinn", Blinn);
+        setBool(shader, "compare", compare);
         setVec3(shader, "viewPos", camera.Position);
         setVec3(shader, "pointLights.position",  lightPos);
         setVec3(shader, "pointLights.ambient", 0.05f, 0.05f, 0.05f);
@@ -339,7 +340,7 @@ unsigned int loadCubemap(vector<std::string> faces)
     return textureID;
 }
 
-unsigned int loadTexture(char const * path)
+unsigned int loadTexture(char const * path, bool gammaCorrection)
 {
     unsigned int textureID;
     glGenTextures(1, &textureID);
@@ -349,19 +350,29 @@ unsigned int loadTexture(char const * path)
     if (data)
     {
         GLenum format;
+        GLenum dataFormat;
         if (nrComponents == 1)
-            format = GL_RED;
+        {
+            format = dataFormat = GL_RED;
+
+        }
         else if (nrComponents == 3)
-            format = GL_RGB;
+        {
+            format = gammaCorrection ? GL_SRGB : GL_RGB;
+            dataFormat = GL_RGB;
+        }
         else if (nrComponents == 4)
-            format = GL_RGBA;
+        {
+            format = gammaCorrection ? GL_SRGB_ALPHA : GL_RGBA;
+            dataFormat = GL_RGBA;
+        }
 
         glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, dataFormat == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, dataFormat == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -387,7 +398,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         showQuad = !showQuad;
     }
     if (key == GLFW_KEY_Z && action == GLFW_PRESS)
-        Blinn = !Blinn;
+        compare = !compare;
 }
 
 // g++ main.cpp -lGL -lglfw -std=c++17 -lassimp && ./a.out
