@@ -4,5 +4,5 @@ This repo helps me keeping track on mister's [Joey de Vries](https://learnopengl
 Compile and run with ```g++ main.cpp -std=c++17 -lassimp -lGL -lglfw && ./a.out```
 
 # What latest commit renders
-![Shadows](screenshots/PointShadow.png)
+![Shadows](screenshots/Normal_Mapping.png)
 

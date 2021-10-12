@@ -3,29 +3,41 @@
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec2 aTexCoords;
-
+layout (location = 3) in vec3 aTangent;
+layout (location = 4) in vec3 aBitangent;
 
 out VS_OUT {
     vec3 FragPos;
-    vec3 Normal;
     vec2 TexCoords;
+    vec3 TangentLightPos;
+    vec3 TangentViewPos;
+    vec3 TangentFragPos;
 } vs_out;
 
 uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
 
-uniform bool reverse_normals;
+uniform vec3 lightPos;
+uniform vec3 viewPos;
 
 void main()
-{    
-    vs_out.FragPos = vec3(model * vec4(aPos, 1.0));
-    if (reverse_normals)
-        vs_out.Normal = transpose(inverse(mat3(model))) * (-1.0 * aNormal);
-    else
-        vs_out.Normal = transpose(inverse(mat3(model))) * aNormal;
+{
+    vs_out.FragPos = vec3(model * vec4(aPos, 1.0));   
     vs_out.TexCoords = aTexCoords;
-    gl_Position = projection * view * model * vec4(vs_out.FragPos, 1.0);
+    
+    mat3 normalMatrix = transpose(inverse(mat3(model)));
+    vec3 T = normalize(normalMatrix * aTangent);
+    vec3 N = normalize(normalMatrix * aNormal);
+    T = normalize(T - dot(T, N) * N);
+    vec3 B = cross(N, T);
+    
+    mat3 TBN = transpose(mat3(T, B, N));    
+    vs_out.TangentLightPos = TBN * lightPos;
+    vs_out.TangentViewPos  = TBN * viewPos;
+    vs_out.TangentFragPos  = TBN * vs_out.FragPos;
+        
+    gl_Position = projection * view * model * vec4(aPos, 1.0);
 }
 
 #shader fragment
@@ -34,75 +46,39 @@ out vec4 FragColor;
 
 in VS_OUT {
     vec3 FragPos;
-    vec3 Normal;
     vec2 TexCoords;
+    vec3 TangentLightPos;
+    vec3 TangentViewPos;
+    vec3 TangentFragPos;
 } fs_in;
 
-uniform sampler2D diffuseTexture;
-uniform samplerCube depthMap;
+uniform sampler2D diffuseMap;
+uniform sampler2D normalMap;
 
 uniform vec3 lightPos;
 uniform vec3 viewPos;
 
-uniform float far_plane;
-uniform bool compare;
-
-vec3 sampleOffsetDirections[20] = vec3[]
-(
-   vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1), 
-   vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
-   vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
-   vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
-   vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
-);   
-
-float ShadowCalculation(vec3 fragPos)
-{
-    vec3 fragToLight = fragPos - lightPos;
-    // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-    float closestDepth = texture(depthMap, fragToLight).r; 
-    closestDepth *= far_plane;
-    // get depth of current fragment from light's perspective
-    float currentDepth = length(fragToLight);
-    // check whether current frag pos is in shadow
-    float shadow = 0.0;
-    float bias   = 0.15;
-    int samples  = 20;
-    float viewDistance = length(viewPos - fragPos);
-    float diskRadius = (1.0 + (viewDistance / far_plane)) / 25.0; 
-    for(int i = 0; i < samples; i++)
-    {
-        float closestDepth = texture(depthMap, fragToLight + sampleOffsetDirections[i] * diskRadius).r; 
-        closestDepth *= far_plane;   // undo mapping [0;1]
-        if(currentDepth - bias > closestDepth)
-            shadow += 1.0;
-    }
-    shadow /= float(samples);
-
-    return shadow;
-}  
-
-
 void main()
 {           
-    vec3 color = texture(diffuseTexture, fs_in.TexCoords).rgb;
-    vec3 normal = normalize(fs_in.Normal);
-    vec3 lightColor = vec3(1.0f);
+     // obtain normal from normal map in range [0,1]
+    vec3 normal = texture(normalMap, fs_in.TexCoords).rgb;
+    // transform normal vector to range [-1,1]
+    normal = normalize(normal * 2.0 - 1.0);  // this normal is in tangent space
+   
+    // get diffuse color
+    vec3 color = texture(diffuseMap, fs_in.TexCoords).rgb;
     // ambient
-    vec3 ambient = 0.3 * color;
+    vec3 ambient = 0.1 * color;
     // diffuse
-    vec3 lightDir = normalize(lightPos - fs_in.FragPos);
+    vec3 lightDir = normalize(fs_in.TangentLightPos - fs_in.TangentFragPos);
     float diff = max(dot(lightDir, normal), 0.0);
-    vec3 diffuse = diff * lightColor;
+    vec3 diffuse = diff * color;
     // specular
-    vec3 viewDir = normalize(viewPos - fs_in.FragPos);
-    float spec = 0.0;
-    vec3 halfwayDir = normalize(lightDir + viewDir);
-    spec = pow(max(dot(normal, halfwayDir), 0.0), 64.0);
-    vec3 specular = spec * lightColor;
-    // calculate shadow
-    float shadow = compare ? ShadowCalculation(fs_in.FragPos) : 0.0;       
-    vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * color;    
-    
-    FragColor = vec4(lighting, 1.0);
+    vec3 viewDir = normalize(fs_in.TangentViewPos - fs_in.TangentFragPos);
+    vec3 reflectDir = reflect(-lightDir, normal);
+    vec3 halfwayDir = normalize(lightDir + viewDir);  
+    float spec = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
+
+    vec3 specular = vec3(0.2) * spec;
+    FragColor = vec4(ambient + diffuse + specular, 1.0);
 }
