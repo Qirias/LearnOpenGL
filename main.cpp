@@ -20,7 +20,7 @@ const unsigned int screenWidth = 1000;
 const unsigned int screenHeight = 1000;
 
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
-glm::vec3 lightPos(0.5f, 1.0f, 0.3f);
+glm::vec3 lightPos(0.5f, 0.5f, 4.3f);
 float lastX = screenWidth / 2.0f;
 float lastY = screenHeight / 2.0f;
 bool firstMouse = true;
@@ -126,8 +126,10 @@ int main()
     glfwSwapInterval(1);
 
 
-    unsigned int floorTexture           = loadTexture(fs::path("res/textures/brickwall.jpg").c_str(), true);
-    unsigned int floorTextureNormals    = loadTexture(fs::path("res/textures/brickwall_normal.jpg").c_str(), true);
+    unsigned int floorTexture           = loadTexture(fs::path("res/textures/bricks2.jpg").c_str(), true);
+    unsigned int floorTextureNormals    = loadTexture(fs::path("res/textures/bricks2_normal.jpg").c_str(), true);
+    unsigned int floorTextureDisp       = loadTexture(fs::path("res/textures/bricks2_disp.jpg").c_str(), true);
+
 
     stbi_set_flip_vertically_on_load(true);
 
@@ -142,6 +144,7 @@ int main()
     useShader(shader);
     setInt(shader, "diffuseTexture", 0);
     setInt(shader, "normalMap", 1);
+    setInt(shader, "depthMap", 2);
 
     
     double lastTime = 0.0;
@@ -165,18 +168,21 @@ int main()
         setMat4(shader, "view", view);
         setMat4(shader, "projection", proj);
 
-        model = glm::rotate(model, glm::radians((float)glfwGetTime() * -10.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0))); // rotate the quad to show normal mapping from multiple directions
         setMat4(shader, "model", model);
         setVec3(shader, "viewPos", camera.Position);
         setVec3(shader, "lightPos", lightPos);
+        setFloat(shader, "height_scale", 0.5);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, floorTexture);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, floorTextureNormals);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, floorTextureDisp);
         renderQuad();
 
         // Render white lamp
         model = glm::mat4(1.0f);
+        lightPos.y = sin(glfwGetTime()) * 4;
         model = glm::translate(model, lightPos);
         model = glm::scale(model, glm::vec3(0.1f));
         setMat4(shader, "model", model);
